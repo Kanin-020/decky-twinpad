@@ -1,11 +1,10 @@
 {
-  "name": "Example Plugin",
-  "author": "John Doe",
-  "flags": ["debug", "_root"],
+  "name": "Twinpad",
+  "author": "Twinpad",
+  "flags": [],
   "api_version": 1,
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Decky example plugin.",
-    "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
+    "tags": ["utility"],
+    "description": "Panel de Twinpad en el QAM: QR de vinculación, URI copiable, estado del Servidor PC, arranque/parada y autoarranque."
   }
 }

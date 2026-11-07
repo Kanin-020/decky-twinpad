@@ -1,7 +1,7 @@
 {
-  "name": "decky-plugin-template",
-  "version": "0.0.1",
-  "description": "A template to quickly create decky plugins from scratch, based on TypeScript and webpack",
+  "name": "decky-twinpad",
+  "version": "0.1.0",
+  "description": "Twinpad en el QAM de Steam: QR de vinculación, URI copiable, estado del Servidor PC, arranque/parada y autoarranque",
   "type": "module",
   "scripts": {
     "build": "rollup -c",

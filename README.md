@@ -1,99 +1,72 @@
-# Decky Plugin Template [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://deckbrew.xyz/discord)
+# Twinpad — plugin de Decky Loader
 
-Reference example for using [decky-frontend-lib](https://github.com/SteamDeckHomebrew/decky-frontend-lib) (@decky/ui) in a [decky-loader](https://github.com/SteamDeckHomebrew/decky-loader) plugin.
+Panel de Twinpad en el Quick Access Menu de Steam (Steam Deck / SteamOS).
+Muestra **lo mismo que la interfaz local del Servidor PC** (SPEC-010) y
+permite operarla sin salir de Game Mode:
 
-### **Please also refer to the [wiki](https://wiki.deckbrew.xyz/en/user-guide/home#plugin-development) for important information on plugin development and submissions/updates. currently documentation is split between this README and the wiki which is something we are hoping to rectify in the future.**  
+- QR de vinculación vigente, con contador `mm:ss` hasta que se renueva.
+- «Regenerar QR»: rota el token al instante (`GET /qr/rotate`, W9 manual).
+- URI de vinculación copiable con un botón.
+- Estado: sesiones activas, juegos compatibles y video configurado del
+  Plugin (W2).
+- «Detener servidor» (parada con gracia, W4) y «Arrancar servidor».
+- «Iniciar servidor al arrancar el equipo» (autoarranque, W5).
 
-## Developers
+## Por qué no hay canal nuevo
 
-### Dependencies
+El plugin **no** define protocolo propio: consume la superficie local ya
+contratada en `127.0.0.1:8430` — `GET /`, `GET /qr`, `GET /qr/rotate` y
+`GET /stop` (SPEC-010 §4–§5, W6 loopback). El backend solo añade lo que es
+responsabilidad del host: lanzar el proceso del servidor cuando no está
+corriendo y conmutar la misma entrada XDG de autoarranque que instala
+`server/src/autostart.rs` (contenido verificado idéntico en el harness de
+verificación).
 
-This template relies on the user having Node.js v16.14+ and `pnpm` (v9) installed on their system.  
-Please make sure to install pnpm v9 to prevent issues with CI during plugin submission.  
-`pnpm` can be downloaded from `npm` itself which is recommended.
+El servidor debe correr **en el mismo dispositivo** que Decky: la página de
+gestión es loopback-only y no se sirve a la LAN.
 
-#### Linux
-
-```bash
-sudo npm i -g pnpm@9
-```
-
-If you would like to build plugins that have their own custom backends, Docker is required as it is used by the Decky CLI tool.
-
-### Making your own plugin
-
-1. You can fork this repo or utilize the "Use this template" button on Github.
-2. In your local fork/own plugin-repository run these commands:
-   1. ``pnpm i``
-   2. ``pnpm run build``
-   - These setup pnpm and build the frontend code for testing.
-3. Consult the [decky-frontend-lib](https://github.com/SteamDeckHomebrew/decky-frontend-lib) repository for ways to accomplish your tasks.
-   - Documentation and examples are still rough, 
-   - Decky loader primarily targets Steam Deck hardware so keep this in mind when developing your plugin.
-4. If using VSCodium/VSCode, run the `setup` and `build` and `deploy` tasks. If not using VSCodium etc. you can derive your own makefile or just manually utilize the scripts for these commands as you see fit.
-
-If you use VSCode or it's derivatives (we suggest [VSCodium](https://vscodium.com/)!) just run the `setup` and `build` tasks. It's really that simple.
-
-#### Other important information
-
-Everytime you change the frontend code (`index.tsx` etc) you will need to rebuild using the commands from step 2 above or the build task if you're using vscode or a derivative.
-
-Note: If you are receiving build errors due to an out of date library, you should run this command inside of your repository:
+## Instalación
 
 ```bash
-pnpm update @decky/ui --latest
+pnpm install
+pnpm run build          # genera dist/index.js
 ```
 
-### Backend support
+Con Decky en modo desarrollador:
 
-If you are developing with a backend for a plugin and would like to submit it to the [decky-plugin-database](https://github.com/SteamDeckHomebrew/decky-plugin-database) you will need to have all backend code located in ``backend/src``, with backend being located in the root of your git repository.
-When building your plugin, the source code will be built and any finished binary or binaries will be output to ``backend/out`` (which is created during CI.)
-If your buildscript, makefile or any other build method does not place the binary files in the ``backend/out`` directory they will not be properly picked up during CI and your plugin will not have the required binaries included for distribution.
-
-Example:  
-In our makefile used to demonstrate the CI process of building and distributing a plugin backend, note that the makefile explicitly creates the `out` folder (``backend/out``) and then compiles the binary into that folder. Here's the relevant snippet.
-
-```make
-hello:
-	mkdir -p ./out
-	gcc -o ./out/hello ./src/main.c
+```bash
+# copia el plugin (con dist/) a la carpeta de plugins del usuario
+cp -r . ~/homebrew/plugins/twinpad
 ```
 
-The CI does create the `out` folder itself but we recommend creating it yourself if possible during your build process to ensure the build process goes smoothly.
+y recarga Decky (`Ajustes → Decky → Recargar`). El plugin aparece como
+«Twinpad» en el QAM.
 
-Note: When locally building your plugin it will be placed into a folder called 'out' this is different from the concept described above.
+## Variables de entorno (host)
 
-The out folder is not sent to the final plugin, but is then put into a ``bin`` folder which is found at the root of the plugin's directory.  
-More information on the bin folder can be found below in the distribution section below.
+| Variable | Uso |
+|---|---|
+| `TWINPAD_LOCAL_PORT` | Puerto de la interfaz local (por defecto 8430, el de `webui::PORT`). |
+| `TWINPAD_SERVER_BIN` | Ruta explícita del binario `twinpad-server` para «Arrancar servidor». Sin ella se busca en `PATH` y en `~/twinpad/target/release/`. |
 
-### Distribution
+## Límites conocidos
 
-We recommend following the instructions found in the [decky-plugin-database](https://github.com/SteamDeckHomebrew/decky-plugin-database) on how to get your plugin up on the plugin store. This is the best way to get your plugin in front of users.
-You can also choose to do distribution via a zip file containing the needed files, if that zip file is uploaded to a URL it can then be downloaded and installed via decky-loader.
+- **Autoarranque en Game Mode:** la entrada XDG `autostart/twinpad-server.desktop`
+  es la que define W5 y funciona en Desktop Mode; en Game Mode SteamOS no
+  ejecuta autoarranque XDG. Si se necesita arranque en Game Mode, hace falta
+  una decisión de producto (unidad systemd de usuario o integración en el
+  arranque de Decky) — hoy no se implementa.
+- **Estado desde HTML:** sesiones, juegos y video solo existen en `GET /`
+  (no hay endpoint JSON). El backend ancla las etiquetas que fija TEST-0135
+  y, si el render cambia, muestra «—» en lugar de romper el panel. Un
+  `GET /status` JSON sería la solución limpia, pero es contrato nuevo
+  (requiere CR/SPEC).
+- **Sin audio/cámara/QR de cámara** en el panel: no forman parte de la
+  superficie local del servidor.
+- **Trazabilidad:** el plugin no tiene REQ/SPEC/CR ni TEST ID asignado; el
+  harness de verificación vive fuera del repo (`tests/` del proyecto no
+  aplica a un plugin TypeScript/Python). Requiere decisión del owner.
 
-Layout of a plugin zip ready for distribution:
-```
-pluginname-v1.0.0.zip (version number is optional but recommended for users sake)
-   |
-   pluginname/ <directory>
-   |  |  |
-   |  |  bin/ <directory> (optional)
-   |  |     |
-   |  |     binary (optional)
-   |  |
-   |  dist/ <directory> [required]
-   |      |
-   |      index.js [required]
-   | 
-   package.json [required]
-   plugin.json [required]
-   main.py {required if you are using the python backend of decky-loader: serverAPI}
-   README.md (optional but recommended)
-   LICENSE(.md) [required, filename should be roughly similar, suffix not needed]
-```
+## Créditos
 
-Note regarding licenses: Including a license is required for the plugin store if your chosen license requires the license to be included alongside usage of source-code/binaries!
-
-Standard procedure for licenses is to have your chosen license at the top of the file, and to leave the original license for the plugin-template at the bottom. If this is not the case on submission to the plugin database, you will be asked to fix this discrepancy.
-
-We cannot and will not distribute your plugin on the Plugin Store if it's license requires it's inclusion but you have not included a license to be re-distributed with your plugin in the root of your git repository.
+Deriva del `decky-plugin-template` (BSD-3-Clause, ver `LICENSE`).
