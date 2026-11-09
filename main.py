@@ -38,17 +38,26 @@ START_TIMEOUT_S = 10.0
 # servidor en `twinpad_server::autostart` — ruta y contenido idénticos, para
 # que el toggle del QAM y el del tray no diverjan.
 AUTOSTART_APP_ID = "twinpad-server"
-AUTOSTART_CONTENT = (
-    "[Desktop Entry]\n"
-    "Type=Application\n"
-    "Name=Twinpad Servidor PC\n"
-    "Comment=Servidor Twinpad: acepta sesiones de Pairing en segundo plano "
-    "(CR-061, SPEC-010 W5)\n"
-    "Exec=twinpad-server\n"
-    "Terminal=false\n"
-    "Categories=Utility;\n"
-    "StartupNotify=false\n"
-)
+def autostart_content(exec_path: str) -> str:
+    """Contenido del desktop entry; `Exec` es la ruta real (AppImage incluido)."""
+    escaped = exec_path.replace("%", "%%")
+    if any(c in exec_path for c in ' "`$\\\t'):
+        # Dentro de comillas: escapar \ primero, luego " ` $.
+        inner = exec_path.replace("\\", "\\\\")
+        for c in ('"', "`", "$"):
+            inner = inner.replace(c, "\\" + c)
+        escaped = '"' + inner.replace("%", "%%") + '"'
+    return (
+        "[Desktop Entry]\n"
+        "Type=Application\n"
+        "Name=Twinpad Servidor PC\n"
+        "Comment=Servidor Twinpad: acepta sesiones de Pairing en segundo plano "
+        "(CR-061, SPEC-010 W5)\n"
+        f"Exec={escaped}\n"
+        "Terminal=false\n"
+        "Categories=Utility;\n"
+        "StartupNotify=false\n"
+    )
 
 # Extracción del estado de la página (W2). La página es HTML de presentación,
 # no un contrato JSON: se anclan las tres etiquetas que TEST-0135 fija y, si
@@ -67,10 +76,16 @@ class Plugin:
     # ------------------------------------------------------------------
     # HTTP local (loopback only, W6)
     # ------------------------------------------------------------------
-    def _request(self, path: str) -> str:
-        """GET síncrono a la interfaz local; lanza en error de transporte."""
+    def _request(self, path: str, action: bool = False) -> str:
+        """GET síncrono a la interfaz local; lanza en error de transporte.
+
+        `action=True` envía `X-Twinpad-Action` (S1: `/stop` y `/qr/rotate`
+        lo exigen para no aceptar peticiones cross-site).
+        """
         url = f"http://{LOCAL_HOST}:{LOCAL_PORT}{path}"
-        with urllib.request.urlopen(url, timeout=HTTP_TIMEOUT_S) as response:
+        headers = {"X-Twinpad-Action": "1"} if action else {}
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
             return response.read().decode("utf-8", "replace")
 
     def _is_up(self) -> bool:
@@ -88,8 +103,8 @@ class Plugin:
         except (urllib.error.URLError, OSError, ValueError):
             return False
 
-    def _qr_payload(self, path: str) -> dict:
-        payload = json.loads(self._request(path))
+    def _qr_payload(self, path: str, action: bool = False) -> dict:
+        payload = json.loads(self._request(path, action=action))
         return {
             "ok": True,
             "uri": payload.get("uri"),
@@ -189,14 +204,14 @@ class Plugin:
     async def regenerate_qr(self) -> dict:
         """«Regenerar QR»: ROTA el token (W9 manual, `/qr/rotate`)."""
         try:
-            return await asyncio.to_thread(self._qr_payload, "/qr/rotate")
+            return await asyncio.to_thread(self._qr_payload, "/qr/rotate", True)
         except (urllib.error.URLError, OSError, ValueError) as error:
             return {"ok": False, "error": str(error)}
 
     async def stop_server(self) -> dict:
         """Parada con gracia (W4) por `GET /stop`; luego confirma el cierre."""
         try:
-            await asyncio.to_thread(self._request, "/stop")
+            await asyncio.to_thread(self._request, "/stop", True)
         except (urllib.error.URLError, OSError) as error:
             # El server pudo caer antes de responder: se comprueba igual.
             decky.logger.info(f"Twinpad: /stop sin respuesta ({error})")
@@ -243,7 +258,10 @@ class Plugin:
         def write() -> None:
             if enabled:
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(AUTOSTART_CONTENT, encoding="utf-8")
+                exec_path = os.environ.get("APPIMAGE", "").strip() or (
+                    Plugin._server_binary() or AUTOSTART_APP_ID
+                )
+                path.write_text(autostart_content(exec_path), encoding="utf-8")
             elif path.exists():
                 path.unlink()
 
