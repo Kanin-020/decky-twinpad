@@ -1,6 +1,5 @@
 import {
   ButtonItem,
-  Focusable,
   PanelSection,
   PanelSectionRow,
   ToggleField,
@@ -117,6 +116,10 @@ function Content() {
       }
     } catch (error) {
       console.warn("Twinpad: no se pudo leer el estado", error);
+      // D6: tras fallo no se reconsulta en cada tick; se pospone la siguiente lectura.
+      deadlineRef.current = Date.now() + POLL_MS;
+      setDeadline(deadlineRef.current);
+      setRemaining(POLL_MS);
     }
   }, []);
 
@@ -170,6 +173,9 @@ function Content() {
       deadlineRef.current = Date.now() + ttl;
       setDeadline(deadlineRef.current);
       setRemaining(ttl);
+    } catch (error) {
+      console.warn("Twinpad: regenerar QR falló", error);
+      toaster.toast({ title: "Twinpad", body: "No se pudo regenerar el QR; se conserva el vigente." });
     } finally {
       setBusy(false);
     }
@@ -245,21 +251,19 @@ function Content() {
 
       <PanelSection title="URI de vinculación">
         <PanelSectionRow>
-          <Focusable onOKButton={onCopy}>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: "11px",
-                wordBreak: "break-all",
-                background: "rgba(0,0,0,0.3)",
-                borderRadius: "4px",
-                padding: "6px",
-                color: status.uri ? "#fff" : "rgba(255,255,255,0.4)",
-              }}
-            >
-              {status.uri ?? "— sin URI mientras el servidor está detenido —"}
-            </div>
-          </Focusable>
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: "11px",
+              wordBreak: "break-all",
+              background: "rgba(0,0,0,0.3)",
+              borderRadius: "4px",
+              padding: "6px",
+              color: status.uri ? "#fff" : "rgba(255,255,255,0.4)",
+            }}
+          >
+            {status.uri ?? "— sin URI mientras el servidor está detenido —"}
+          </div>
         </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem layout="below" disabled={!status.uri || busy} onClick={onCopy}>

@@ -96,10 +96,12 @@ class Plugin:
         «detenido» apagaría el panel con el servidor corriendo.
         """
         try:
-            self._request("/qr")
-            return True
-        except urllib.error.HTTPError:
-            return True
+            payload = json.loads(self._request("/qr"))
+            # D1: un proceso ajeno en el puerto no debe contar como servidor.
+            return isinstance(payload, dict) and isinstance(payload.get("uri"), str)
+        except urllib.error.HTTPError as error:
+            # 503 de E7 (QR no renderizable) viene del servidor propio: vivo.
+            return error.code == 503
         except (urllib.error.URLError, OSError, ValueError):
             return False
 
@@ -160,7 +162,11 @@ class Plugin:
         override = os.environ.get("TWINPAD_SERVER_BIN", "").strip()
         candidates = [
             override,
+            # D3: con AppImage, la ruta del propio AppImage es el binario.
+            os.environ.get("APPIMAGE", "").strip(),
             shutil.which("twinpad-server") or "",
+            # Ruta fija de instalación local (`install` desde el repo).
+            str(Path(os.path.expanduser("~")) / ".local" / "bin" / "twinpad-server"),
             str(Path(os.path.expanduser("~")) / "twinpad" / "target" / "release" / "twinpad-server"),
         ]
         for candidate in candidates:
