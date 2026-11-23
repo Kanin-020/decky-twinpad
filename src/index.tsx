@@ -301,7 +301,11 @@ function Content() {
           </PanelSectionRow>
         ) : (
           <PanelSectionRow>
-            <ButtonItem layout="below" disabled={busy} onClick={() => void run("arrancar", startServer)}>
+            <ButtonItem
+              layout="below"
+              disabled={busy || !status.can_start}
+              onClick={() => void run("arrancar", startServer)}
+            >
               {status.can_start ? "Arrancar servidor" : "Arrancar servidor (binario no encontrado)"}
             </ButtonItem>
           </PanelSectionRow>
