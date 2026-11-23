@@ -47,7 +47,7 @@ y recarga Decky (`Ajustes → Decky → Recargar`). El plugin aparece como
 | Variable | Uso |
 |---|---|
 | `TWINPAD_LOCAL_PORT` | Puerto de la interfaz local (por defecto 8430, el de `webui::PORT`). |
-| `TWINPAD_SERVER_BIN` | Ruta explícita del binario `twinpad-server` para «Arrancar servidor». Sin ella se busca en `PATH` y en `~/twinpad/target/release/`. |
+| `TWINPAD_SERVER_BIN` | Ruta explícita del binario `twinpad-server` para «Arrancar servidor». Sin ella se usa la ruta que el servidor publica en `~/.local/share/twinpad/server-path` al arrancar, `$APPIMAGE`, `PATH` y `~/twinpad/target/release/`. |
 
 ## Límites conocidos
 

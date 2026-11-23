@@ -158,12 +158,30 @@ class Plugin:
     # Binario del servidor (para arrancarlo desde el QAM)
     # ------------------------------------------------------------------
     @staticmethod
+    def _published_binary() -> str:
+        """Ruta que el servidor publica en su carpeta de datos al arrancar.
+
+        POR QUÉ: en Game Mode el plugin no hereda `$APPIMAGE` (esa variable
+        solo existe en el proceso hijo del AppImage), así que sin este fichero
+        un servidor lanzado desde un AppImage fuera de `PATH` no se puede
+        arrancar desde el panel.
+        """
+        base = os.environ.get("XDG_DATA_HOME", "").strip()
+        root = Path(base) if base else Path(os.path.expanduser("~")) / ".local" / "share"
+        try:
+            return (root / "twinpad" / "server-path").read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+
+    @staticmethod
     def _server_binary() -> str | None:
         override = os.environ.get("TWINPAD_SERVER_BIN", "").strip()
         candidates = [
             override,
             # D3: con AppImage, la ruta del propio AppImage es el binario.
             os.environ.get("APPIMAGE", "").strip(),
+            # Ruta que el servidor dejó la última vez que arrancó.
+            Plugin._published_binary(),
             shutil.which("twinpad-server") or "",
             # Ruta fija de instalación local (`install` desde el repo).
             str(Path(os.path.expanduser("~")) / ".local" / "bin" / "twinpad-server"),
@@ -236,7 +254,10 @@ class Plugin:
             return {
                 "ok": False,
                 "running": False,
-                "error": "No se encontró el binario twinpad-server (define TWINPAD_SERVER_BIN).",
+                "error": (
+                    "No se encontró el binario twinpad-server "
+                    "(arráncalo una vez desde el escritorio o define TWINPAD_SERVER_BIN)."
+                ),
             }
         try:
             self._process = subprocess.Popen(
