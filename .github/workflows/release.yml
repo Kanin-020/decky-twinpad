@@ -10,6 +10,11 @@ on:
         description: "Release tag (for example, v0.1.0)"
         required: true
         type: string
+      prerelease:
+        description: "Mark this release as a pre-release"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -59,17 +64,26 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+          RELEASE_PRERELEASE: ${{ inputs.prerelease }}
         run: |
           set -euo pipefail
           version="${RELEASE_VERSION#v}"
           tag="v${version}"
           asset="dist/decky-twinpad-${version}.zip"
+          prerelease_args=()
+          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+            prerelease_args+=(--prerelease)
+          fi
 
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$asset" --clobber
+            if (( ${#prerelease_args[@]} )); then
+              gh release edit "$tag" "${prerelease_args[@]}"
+            fi
           else
             gh release create "$tag" "$asset" \
               --target "$GITHUB_SHA" \
               --title "Twinpad Decky ${tag}" \
-              --generate-notes
+              --generate-notes \
+              "${prerelease_args[@]}"
           fi
