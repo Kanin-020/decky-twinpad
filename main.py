@@ -51,8 +51,8 @@ def autostart_content(exec_path: str) -> str:
         "[Desktop Entry]\n"
         "Type=Application\n"
         "Name=Twinpad Servidor PC\n"
-        "Comment=Servidor Twinpad: acepta sesiones de Pairing en segundo plano "
-        "(CR-061, SPEC-010 W5)\n"
+        "Comment=Servidor de Twinpad: recibe la Segunda pantalla y los controles "
+        "de la app\n"
         f"Exec={escaped}\n"
         "Terminal=false\n"
         "Categories=Utility;\n"
@@ -255,8 +255,8 @@ class Plugin:
                 "ok": False,
                 "running": False,
                 "error": (
-                    "No se encontró el binario twinpad-server "
-                    "(arráncalo una vez desde el escritorio o define TWINPAD_SERVER_BIN)."
+                    "No se encontró el servidor de Twinpad en este equipo. "
+                    "Ábrelo una vez desde el escritorio del PC."
                 ),
             }
         try:

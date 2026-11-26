@@ -210,9 +210,7 @@ function Content() {
       <PanelSection title="Vinculación">
         <PanelSectionRow>
           <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>
-            {status.running
-              ? `Servidor activo en 127.0.0.1:${status.port}`
-              : `Servidor detenido (127.0.0.1:${status.port})`}
+            {status.running ? "Servidor activo" : "Servidor detenido"}
           </div>
         </PanelSectionRow>
         {status.running && status.svg ? (
@@ -284,9 +282,9 @@ function Content() {
         </PanelSectionRow>
         <PanelSectionRow>
           <div style={{ fontSize: "12px" }}>
-            Video del Plugin:{" "}
+            Vídeo:{" "}
             {status.video
-              ? `${status.video.width}×${status.video.height} a ${status.video.bitrate_kbps} kbps`
+              ? `${status.video.width}×${status.video.height} · ${status.video.bitrate_kbps} kbps`
               : "—"}
           </div>
         </PanelSectionRow>
@@ -306,7 +304,7 @@ function Content() {
               disabled={busy || !status.can_start}
               onClick={() => void run("arrancar", startServer)}
             >
-              {status.can_start ? "Arrancar servidor" : "Arrancar servidor (binario no encontrado)"}
+              {status.can_start ? "Arrancar servidor" : "Arrancar servidor (no instalado)"}
             </ButtonItem>
           </PanelSectionRow>
         )}
@@ -316,7 +314,7 @@ function Content() {
         <PanelSectionRow>
           <ToggleField
             label="Iniciar servidor al arrancar el equipo"
-            description="Misma entrada de autoarranque que el servidor (SPEC-010 W5)."
+            description="El servidor se inicia solo al encender el equipo."
             checked={status.autostart}
             disabled={busy}
             onChange={(enabled: boolean) => void onAutostart(enabled)}
@@ -328,17 +326,14 @@ function Content() {
 }
 
 /**
- * Marca de la app: el mismo icono adaptativo de Android (dos trapecios
- * enfrentados en Signal Violet sobre lienzo blanco redondeado), en SVG para
- * que escale sin depender de un recurso rasterizado.
+ * Marca del plugin: solo los dos trapecios enfrentados del logo, sin lienzo
+ * ni fondo. Se pintan con `currentColor` para que tomen el color del tema,
+ * como el resto de iconos de plugins del QAM. El viewBox se recorta al dibujo
+ * para que ocupen el icono entero y no queden pequeños.
  */
 const TwinpadMark = () => (
-  <svg viewBox="0 0 1254 1254" width="1em" height="1em" aria-hidden="true">
-    <rect width="1254" height="1254" rx="276" fill="#FFFFFF" />
-    <g
-      fill="#7064F2"
-      transform="translate(0 28) translate(627 599) scale(0.6) translate(-627 -599)"
-    >
+  <svg viewBox="256 313 742 572" width="1em" height="1em" aria-hidden="true">
+    <g fill="currentColor">
       <path d="M530,340C565,328 601,352 601,392L601,815C601,850 575,870 540,864L312,778C285,768 271,745 271,720L271,478C271,450 288,428 312,420Z" />
       <path d="M724,340C689,328 653,352 653,392L653,815C653,850 679,870 714,864L942,778C969,768 983,745 983,720L983,478C983,450 966,428 942,420Z" />
     </g>
@@ -348,7 +343,7 @@ const TwinpadMark = () => (
 export default definePlugin(() => {
   return {
     name: "Twinpad",
-    titleView: <div className={staticClasses.Title}>Twinpad — Servidor PC</div>,
+    titleView: <div className={staticClasses.Title}>Twinpad</div>,
     content: <Content />,
     icon: <TwinpadMark />,
     onDismount() {
