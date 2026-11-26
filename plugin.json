@@ -5,6 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["utility"],
-    "description": "Panel de Twinpad en el QAM: QR de vinculación, URI copiable, estado del Servidor PC, arranque/parada y autoarranque."
+    "description": "Panel de Twinpad en el QAM: QR de vinculación, URI copiable, estado del Servidor PC, arranque/parada y autoarranque.",
+    "image": "https://raw.githubusercontent.com/Kanin-020/decky-twinpad/main/assets/icon.png"
   }
 }

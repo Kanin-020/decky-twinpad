@@ -56,7 +56,7 @@ jobs:
           rm -rf "$stage"
           mkdir -p "$stage/dist"
           cp plugin.json package.json main.py LICENSE README.md "$stage/"
-          cp -a assets defaults py_modules "$stage/"
+          cp -a assets py_modules "$stage/"
           cp dist/index.js "$stage/dist/"
           (cd dist && zip -qr "decky-twinpad-${version}.zip" Twinpad)
 

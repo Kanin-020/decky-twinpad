@@ -1,6 +1,6 @@
 {
   "name": "decky-twinpad",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Twinpad en el QAM de Steam: QR de vinculación, URI copiable, estado del Servidor PC, arranque/parada y autoarranque",
   "type": "module",
   "scripts": {
@@ -10,21 +10,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SteamDeckHomebrew/decky-plugin-template.git"
+    "url": "git+https://github.com/Kanin-020/decky-twinpad.git"
   },
   "keywords": [
     "decky",
     "plugin",
-    "plugin-template",
-    "steam-deck",
-    "deck"
+    "twinpad",
+    "steam-deck"
   ],
-  "author": "You <you@you.tld>",
+  "author": "Twinpad",
   "license": "BSD-3-Clause",
   "bugs": {
-    "url": "https://github.com/SteamDeckHomebrew/decky-plugin-template/issues"
+    "url": "https://github.com/Kanin-020/decky-twinpad/issues"
   },
-  "homepage": "https://github.com/SteamDeckHomebrew/decky-plugin-template#readme",
+  "homepage": "https://github.com/Kanin-020/decky-twinpad#readme",
   "devDependencies": {
     "@decky/rollup": "^1.0.2",
     "@decky/ui": "^4.11.0",
