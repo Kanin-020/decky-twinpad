@@ -95,12 +95,51 @@ function mmss(ms: number): string {
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+/**
+ * Contenedor que ya está desplazado: el panel de Decky no es scrollable por sí
+ * mismo, Steam envuelve el contenido del plugin en un ancestro con scroll
+ * (a veces `overflow: hidden` y `scrollTop` programático, por eso se comprueba
+ * la posición y no solo el estilo).
+ */
+function scrolledAncestor(root: HTMLElement | null): HTMLElement | null {
+  let node = root?.parentElement ?? null;
+  while (node) {
+    if (node.scrollTop > 1 && node.scrollHeight > node.clientHeight) return node;
+    node = node.parentElement;
+  }
+  const documentScroller = document.scrollingElement;
+  return documentScroller instanceof HTMLElement && documentScroller.scrollTop > 1
+    ? documentScroller
+    : null;
+}
+
 function Content() {
   const [status, setStatus] = useState<Status>(EMPTY);
   const [deadline, setDeadline] = useState<number | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const deadlineRef = useRef<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // El QAM conserva el foco en el panel al desplazarse. Sin esto, D-pad arriba
+  // desde el fondo salta a la flecha de volver aunque el contenido siga
+  // desplazado; solo se permite ese salto cuando el scroll ya está a 0.
+  useEffect(() => {
+    const root = contentRef.current;
+    if (!root) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowUp" && event.keyCode !== 38) return;
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      const scroller = scrolledAncestor(root);
+      if (!scroller) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const step = Math.max(96, scroller.clientHeight * 0.5);
+      scroller.scrollTop = Math.max(0, scroller.scrollTop - step);
+    };
+    root.addEventListener("keydown", onKeyDown, true);
+    return () => root.removeEventListener("keydown", onKeyDown, true);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -225,7 +264,7 @@ function Content() {
   };
 
   return (
-    <>
+    <div ref={contentRef}>
       <PanelSection title="Vinculación">
         <PanelSectionRow>
           <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>
@@ -356,7 +395,7 @@ function Content() {
           />
         </PanelSectionRow>
       </PanelSection>
-    </>
+    </div>
   );
 }
 
