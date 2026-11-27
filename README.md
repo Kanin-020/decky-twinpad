@@ -9,14 +9,18 @@ permite operarla sin salir de Game Mode:
 - URI de vinculación copiable con un botón.
 - Estado: sesiones activas, juegos compatibles y video configurado del
   Plugin (W2).
+- «Mando virtual (DualSense)»: activa y desactiva el HID virtual del
+  servidor con el mismo estado y la misma preferencia que la página y el tray
+  (W10, CR-132).
 - «Detener servidor» (parada con gracia, W4) y «Arrancar servidor».
 - «Iniciar servidor al arrancar el equipo» (autoarranque, W5).
 
 ## Por qué no hay canal nuevo
 
 El plugin **no** define protocolo propio: consume la superficie local ya
-contratada en `127.0.0.1:8430` — `GET /`, `GET /qr`, `GET /qr/rotate` y
-`GET /stop` (SPEC-010 §4–§5, W6 loopback). El backend solo añade lo que es
+contratada en `127.0.0.1:8430` — `GET /`, `GET /qr`, `GET /qr/rotate`,
+`GET /stop` y `POST /virtual-pad` (SPEC-010 §4–§5, W6 loopback). El backend
+solo añade lo que es
 responsabilidad del host: lanzar el proceso del servidor cuando no está
 corriendo y conmutar la misma entrada XDG de autoarranque que instala
 `server/src/autostart.rs` (contenido verificado idéntico en el harness de
@@ -63,9 +67,10 @@ y recarga Decky (`Ajustes → Decky → Recargar`). El plugin aparece como
   (requiere CR/SPEC).
 - **Sin audio/cámara/QR de cámara** en el panel: no forman parte de la
   superficie local del servidor.
-- **Trazabilidad:** el plugin no tiene REQ/SPEC/CR ni TEST ID asignado; el
-  harness de verificación vive fuera del repo (`tests/` del proyecto no
-  aplica a un plugin TypeScript/Python). Requiere decisión del owner.
+- **Trazabilidad:** el plugin se rige por SPEC-010; el interruptor del mando
+  virtual está cubierto por CR-132 y TEST-0231. La prueba Python vive en
+  `tests/test_virtual_pad.py` y el resto del panel sigue sin harness propio;
+  la interacción física del QAM requiere banco.
 
 ## Créditos
 

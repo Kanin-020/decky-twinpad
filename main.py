@@ -18,6 +18,7 @@ import re
 import shutil
 import subprocess
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -67,6 +68,8 @@ RE_SESSIONS = re.compile(r"Sesiones activas:\s*(\d+)")
 RE_GAMES = re.compile(r'<ul class="panel__list">(.*?)</ul>', re.DOTALL)
 RE_LI = re.compile(r"<li>(.*?)</li>", re.DOTALL)
 RE_VIDEO = re.compile(r"Video del Plugin:\s*(\d+)×(\d+)\s*a\s*(\d+)\s*kbps")
+# W10: estado del mando virtual tal como lo pinta `GET /` (CR-132).
+RE_PAD = re.compile(r'id="pad-state">(Activado|Desactivado)<')
 
 
 class Plugin:
@@ -76,15 +79,20 @@ class Plugin:
     # ------------------------------------------------------------------
     # HTTP local (loopback only, W6)
     # ------------------------------------------------------------------
-    def _request(self, path: str, action: bool = False) -> str:
-        """GET síncrono a la interfaz local; lanza en error de transporte.
+    def _request(self, path: str, action: bool = False, data: dict | None = None) -> str:
+        """Petición síncrona a la interfaz local; lanza en error de transporte.
 
-        `action=True` envía `X-Twinpad-Action` (S1: `/stop` y `/qr/rotate`
-        lo exigen para no aceptar peticiones cross-site).
+        `action=True` envía `X-Twinpad-Action` (S1: `/stop`, `/qr/rotate` y
+        `/virtual-pad` lo exigen para no aceptar peticiones cross-site). Con
+        `data` se hace `POST` de formulario; sin él, `GET`.
         """
         url = f"http://{LOCAL_HOST}:{LOCAL_PORT}{path}"
         headers = {"X-Twinpad-Action": "1"} if action else {}
-        request = urllib.request.Request(url, headers=headers)
+        body = None
+        if data is not None:
+            body = urllib.parse.urlencode(data).encode("utf-8")
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+        request = urllib.request.Request(url, data=body, headers=headers)
         with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
             return response.read().decode("utf-8", "replace")
 
@@ -120,6 +128,7 @@ class Plugin:
             "sessions": None,
             "games": [],
             "video": None,
+            "virtual_pad": None,
         }
         try:
             html = self._request("/")
@@ -139,6 +148,9 @@ class Plugin:
                 "height": int(video.group(2)),
                 "bitrate_kbps": int(video.group(3)),
             }
+        pad = RE_PAD.search(html)
+        if pad:
+            state["virtual_pad"] = pad.group(1) == "Activado"
         return state
 
     # ------------------------------------------------------------------
@@ -207,6 +219,7 @@ class Plugin:
             "sessions": None,
             "games": [],
             "video": None,
+            "virtual_pad": None,
             "autostart": self._autostart_on(),
             "can_start": self._server_binary() is not None,
         }
@@ -231,6 +244,27 @@ class Plugin:
             return await asyncio.to_thread(self._qr_payload, "/qr/rotate", True)
         except (urllib.error.URLError, OSError, ValueError) as error:
             return {"ok": False, "error": str(error)}
+
+    async def set_virtual_pad(self, enabled: bool) -> dict:
+        """W10 (CR-132): conmuta el DualSense virtual por `POST /virtual-pad`.
+
+        Es la misma superficie local que usan la página y el tray; el estado
+        vigente se relee de `GET /` en el siguiente refresco.
+        """
+        try:
+            await asyncio.to_thread(
+                self._request,
+                "/virtual-pad",
+                True,
+                {"enabled": "1" if enabled else "0"},
+            )
+        except urllib.error.HTTPError as error:
+            with error:
+                detail = error.read().decode("utf-8", "replace").strip()
+            return {"ok": False, "error": detail or str(error)}
+        except (urllib.error.URLError, OSError) as error:
+            return {"ok": False, "error": str(error)}
+        return {"ok": True, "enabled": enabled}
 
     async def stop_server(self) -> dict:
         """Parada con gracia (W4) por `GET /stop`; luego confirma el cierre."""

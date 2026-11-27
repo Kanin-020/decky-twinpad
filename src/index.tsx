@@ -28,6 +28,7 @@ type Status = {
   sessions: number | null;
   games: string[];
   video: VideoConfig | null;
+  virtual_pad: boolean | null;
   autostart: boolean;
   can_start: boolean;
 };
@@ -40,6 +41,7 @@ const regenerateQr = callable<[], QrPayload>("regenerate_qr");
 const stopServer = callable<[], ActionResult>("stop_server");
 const startServer = callable<[], ActionResult>("start_server");
 const setAutostart = callable<[enabled: boolean], ActionResult>("set_autostart");
+const setVirtualPad = callable<[enabled: boolean], ActionResult>("set_virtual_pad");
 
 /** Sondeo del panel: 5 s de estado; el contador del QR corre en local. */
 const POLL_MS = 5000;
@@ -53,6 +55,7 @@ const EMPTY: Status = {
   sessions: null,
   games: [],
   video: null,
+  virtual_pad: null,
   autostart: false,
   can_start: false,
 };
@@ -205,6 +208,22 @@ function Content() {
     }
   };
 
+  const onVirtualPad = async (enabled: boolean) => {
+    setBusy(true);
+    try {
+      const result = await setVirtualPad(enabled);
+      if (!result.ok) {
+        toaster.toast({
+          title: "Twinpad",
+          body: result.error ?? "No se pudo cambiar el mando virtual.",
+        });
+      }
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <PanelSection title="Vinculación">
@@ -287,6 +306,22 @@ function Content() {
               ? `${status.video.width}×${status.video.height} · ${status.video.bitrate_kbps} kbps`
               : "—"}
           </div>
+        </PanelSectionRow>
+      </PanelSection>
+
+      <PanelSection title="Mando virtual">
+        <PanelSectionRow>
+          <ToggleField
+            label="Mando virtual (DualSense)"
+            description={
+              status.running && status.virtual_pad === null
+                ? "No se pudo leer el estado del mando virtual."
+                : "Steam lo ve como un DualSense con botón PS, touchpad y giroscopio."
+            }
+            checked={status.virtual_pad === true}
+            disabled={!status.running || status.virtual_pad === null || busy}
+            onChange={(enabled: boolean) => void onVirtualPad(enabled)}
+          />
         </PanelSectionRow>
       </PanelSection>
 
